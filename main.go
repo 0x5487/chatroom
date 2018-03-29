@@ -4,7 +4,7 @@ import "github.com/jasonsoft/napnap"
 
 func main() {
 	nap := napnap.New()
-	nap.SetRender("views/*")
+	nap.SetRender("./templates")
 
 	router := napnap.NewRouter()
 	// display client page
@@ -15,6 +15,7 @@ func main() {
 	router.Get("/ws", napnap.WrapHandler(websocketEndpoint()))
 	nap.Use(router)
 
-	nap.Run(":8080")
+	httpEngine := napnap.NewHttpEngine(":8080") //run on port 8080
+	nap.Run(httpEngine)
 
 }
