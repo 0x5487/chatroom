@@ -3,8 +3,16 @@
 <head>
 <title>Chat</title>
 <script type="text/javascript">
+let conn;
+
+function refreshCounter() {
+    payload = {}
+    payload.kind = "count";
+    str = JSON.stringify(payload);
+    conn.send(str);
+}
+
 window.onload = function () {
-    var conn;
     var msg = document.getElementById("msg");
     var log = document.getElementById("log");
     function appendLog(item) {
@@ -21,7 +29,12 @@ window.onload = function () {
         if (!msg.value) {
             return false;
         }
-        conn.send(msg.value);
+        let payload = {};
+        payload.kind = "msg";
+        payload.data = {};
+        payload.data.text = msg.value;
+        str = JSON.stringify(payload);
+        conn.send(str);
         msg.value = "";
         return false;
     };
@@ -35,20 +48,36 @@ window.onload = function () {
         conn.onmessage = function (evt) {            
             console.log(evt.data)
             payload = JSON.parse(evt.data)
+            counter = document.querySelector("#counter");
 
-            if (payload.kind == "msg") {
-                var text = payload.member.name + ": " + payload.data.text;
-                var item = document.createElement("div");
-                item.innerText = text;
-                appendLog(item);
+            switch(payload.kind) {
+                case "msg":
+                    var text = payload.member.name + ": " + payload.data.text;
+                    var item = document.createElement("div");
+                    item.innerText = text;
+                    appendLog(item);
+                    break;
+                case "join":
+                    var text = "********** welcome " + payload.member.name + " **********";
+                    var item = document.createElement("div");
+                    item.innerText = text;
+                    appendLog(item);
+                    break;
+                case "count":                    
+                    counter.innerText = payload.data;
+                    break;
             }
         };
+
+        setInterval(refreshCounter, 5000);
     } else {
         var item = document.createElement("div");
         item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
         appendLog(item);
     }
 };
+
+
 </script>
 <style type="text/css">
 html {
@@ -86,9 +115,14 @@ body {
 </head>
 <body>
 <div id="log"></div>
-<form id="form">
-    <input type="submit" value="Send" />
-    <input type="text" id="msg" size="64"/>
-</form>
+<div>
+    <form id="form">
+        <input type="submit" value="Send" />
+        <input type="text" id="msg" size="64"/>
+        <span>人數:</span><span id="counter">0</span>
+    </form>
+    
+</div>
+
 </body>
 </html>

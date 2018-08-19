@@ -3,7 +3,6 @@ package chat
 import (
 	"github.com/jasonsoft/chatroom/pkg/chat/model"
 	"github.com/jasonsoft/chatroom/pkg/chat/service"
-	"github.com/jasonsoft/log"
 	"github.com/jasonsoft/napnap"
 )
 
@@ -24,14 +23,16 @@ func NewChatRouter() *napnap.Router {
 }
 
 func (h *ChatHandlder) roomJoinEndpoint(c *napnap.Context) {
-	log.Debug("=== begin join default room ===")
-
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	client := model.NewClient("Jason", conn)
+	member := model.Member{
+		Name:   "Jason",
+		Avatar: "000",
+	}
+	client := model.NewClient(member, conn)
 
 	room, err := h.svc.RoomGet("default")
 	if err != nil {
@@ -42,6 +43,4 @@ func (h *ChatHandlder) roomJoinEndpoint(c *napnap.Context) {
 	if err != nil {
 		panic(err)
 	}
-
-	log.Debug("=== end join default room ===")
 }

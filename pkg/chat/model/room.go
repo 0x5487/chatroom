@@ -1,6 +1,8 @@
 package model
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type Room struct {
 	Name string
@@ -8,7 +10,7 @@ type Room struct {
 	// Registered clients.
 	clients map[*Client]bool
 
-	// Inbound messages from the clients.
+	// broadcast messages to all clients.
 	broadcast chan Payload
 
 	// Register requests from the clients.
@@ -39,6 +41,13 @@ func (rm *Room) Join(c *Client) error {
 
 	go c.readPump()
 	go c.writePump()
+
+	payload := Payload{
+		Kind:   "join",
+		Member: c.member,
+	}
+
+	rm.broadcast <- payload
 
 	return nil
 }

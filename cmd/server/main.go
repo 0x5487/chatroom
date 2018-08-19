@@ -22,7 +22,7 @@ func main() {
 	nap.Use(napnap.NewHealth())
 
 	// display client page
-	router.Get("/chat", func(c *napnap.Context) {
+	router.Get("/", func(c *napnap.Context) {
 		c.Render(200, "chat.html", nil)
 	})
 	nap.Use(router)

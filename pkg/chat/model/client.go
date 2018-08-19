@@ -1,11 +1,11 @@
 package model
 
 import (
-	"bytes"
-	"log"
+	"encoding/json"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/jasonsoft/log"
 )
 
 const (
@@ -34,9 +34,8 @@ var upgrader = websocket.Upgrader{
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
-	name string
-
-	room *Room
+	member Member
+	room   *Room
 
 	// The websocket connection.
 	conn *websocket.Conn
@@ -45,11 +44,11 @@ type Client struct {
 	send chan []byte
 }
 
-func NewClient(name string, conn *websocket.Conn) *Client {
+func NewClient(member Member, conn *websocket.Conn) *Client {
 	return &Client{
-		name: name,
-		conn: conn,
-		send: make(chan []byte, 256),
+		member: member,
+		conn:   conn,
+		send:   make(chan []byte, 512),
 	}
 }
 
@@ -70,24 +69,23 @@ func (c *Client) readPump() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				log.Errorf("error: %v", err)
 			}
 			break
 		}
-		textB := bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 
-		payload := Payload{
-			Kind: "msg",
-			Member: Member{
-				Name:   c.name,
-				Avatar: "000",
-			},
-			Data: Message{
-				Text: string(textB[:]),
-			},
+		log.Debug("read messsage")
+		payload := Payload{}
+		if err := json.Unmarshal(message, &payload); err != nil {
+			log.Errorf("client: ws payload format is wrong: %v, content: %s", err, string(message[:]))
+			continue
 		}
 
-		c.room.broadcast <- payload
+		err = c.handlePayload(&payload)
+		if err != nil {
+			log.Errorf("chat: handle client payload error: %v", err)
+			continue
+		}
 	}
 }
 
@@ -124,4 +122,26 @@ func (c *Client) writePump() {
 			}
 		}
 	}
+}
+
+func (c *Client) handlePayload(payload *Payload) error {
+	log.Debug("handlePayload..")
+
+	switch payload.Kind {
+	case "count":
+		payload.Data = c.room.Count()
+		bytes, err := json.Marshal(payload)
+		if err != nil {
+			log.Errorf("chat: json marshal error: %v", err)
+			return err
+		}
+		c.send <- bytes
+	case "msg":
+		payload.Member = c.member
+		log.Debug("payload: %#v")
+		c.room.broadcast <- *payload
+	}
+
+	//textB := bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+	return nil
 }
