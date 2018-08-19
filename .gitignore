@@ -3,3 +3,4 @@
 /bifrost
 /config.yml
 /debug
+/cmd/server/debug
